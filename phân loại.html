@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />  <title>Phân loại rác</title>
+     <!-- Import Google Font - Poppins (modern and friendly) -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Import Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />  <style>
+    :root {
+      --primary-color: #1b5e20;
+      --primary-light: #4c8c4a;
+      --primary-dark: #003300;
+      --accent-color: #81c784;
+      --text-color: #2e7d32;
+      --background-light: #f4fff4;
+      --background-dark: #e8f5e9;
+      --card-background: #ffffff;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.12);
+      --border-radius: 16px;
+      --spacing: 24px;
+      --organic-color: #2e7d32;
+      --recycle-color: #f9a825;
+    }
+      /* Removed navbar styles */
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, var(--background-light) 0%, var(--background-dark) 100%);
+      color: var(--text-color);
+      line-height: 1.6;
+      padding: var(--spacing);
+      min-height: 100vh;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing);
+    }    /* Header styles */
+    .app-header {
+      text-align: center;
+      margin-bottom: calc(var(--spacing) * 1.5);
+      background: var(--card-background);
+      padding: calc(var(--spacing) * 1.5);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+    }
+
+    .app-header h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 15px;
+      animation: slideInFromTop 1.2s ease-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .app-header h1 i {
+      font-size: 2.5rem;
+      color: var(--accent-color);
+    }
+
+    .app-header p {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: var(--text-color);
+      max-width: 700px;
+      margin: 0 auto;
+      opacity: 0.9;
+    }    /* Card layout system */
+    .card-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing);
+      justify-content: center;
+      margin-top: var(--spacing);
+    }
+
+    /* Main interaction card - combined camera and results */
+    .main-interaction-card {
+      background: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: calc(var(--spacing) * 1.5);
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      animation: fadeIn 1.5s ease-in-out;
+      transition: all 0.3s ease;
+    }
+
+    .main-interaction-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .interaction-header {
+      text-align: center;
+      margin-bottom: calc(var(--spacing) * 1.5);
+      padding-bottom: var(--spacing);
+      border-bottom: 3px solid var(--accent-color);
+    }
+
+    .interaction-header h2 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .interaction-header p {
+      color: var(--text-color);
+      opacity: 0.8;
+      font-size: 1.1rem;
+    }
+
+    .interaction-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--spacing) * 1.5);
+      align-items: start;
+    }
+
+    .camera-section, .results-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      margin-bottom: var(--spacing);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: var(--spacing);
+      flex: 1 1 400px;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 1.5s ease-in-out;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      width: 100%;
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 10px;
+    }
+
+    .card-header h2 {
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-body {
+      width: 100%;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Camera/Video styles */
+    .video-container {
+      width: 100%;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--spacing);
+    }
+
+    video, canvas {
+      max-width: 100%;
+      height: auto;
+      border: 2px solid var(--primary-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+    }    /* Button styles */
+    .btn {
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 280px;
+      box-shadow: 0 4px 12px rgba(27, 94, 32, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(27, 94, 32, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(-1px);
+    }
+
+    .btn i {
+      font-size: 1.2rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    }
+
+    /* Loading animation for button */
+    .btn.loading {
+      pointer-events: none;
+    }
+
+    .btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }    /* Result display */
+    .result-container {
+      margin-top: var(--spacing);
+      padding: calc(var(--spacing) * 0.8);
+      border: 2px solid var(--accent-color);
+      border-radius: var(--border-radius);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(232, 245, 233, 0.8) 100%);
+      width: 100%;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-container:hover {
+      transform: scale(1.02);
+      box-shadow: var(--shadow);
+    }
+
+    .result-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--organic-color), var(--recycle-color));
+    }
+
+    #result {
+      font-weight: 600;
+      font-size: 1.4rem;
+      color: var(--primary-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background-color: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 3px;
+    }    /* Rules section - Modern & Clean Design */
+    .rules-section {
+      margin-top: calc(var(--spacing) * 2);
+    }
+
+    .rules-card {
+      background: var(--card-background);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 0;
+      width: 100%;
+      animation: fadeIn 1.8s ease-in-out;
+      overflow: hidden;
+    }
+
+    .rules-header {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: white;
+      text-align: center;
+      padding: calc(var(--spacing) * 1.2) calc(var(--spacing) * 1.5);
+      margin: 0;
+      border-radius: 20px 20px 0 0;
+    }
+
+    .rules-header h2 {
+      font-size: 2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0;
+      color: white;
+    }
+
+    .rules-header p {
+      margin-top: 8px;
+      font-size: 1.1rem;
+      opacity: 0.9;
+      color: white;
+    }
+
+    .rules-content {
+      padding: calc(var(--spacing) * 1.5);
+    }
+
+    .waste-types {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing);
+      margin-bottom: var(--spacing);
+    }
+
+    .waste-type {
+      position: relative;
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid transparent;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .waste-type:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .waste-type.organic {
+      background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+      border-color: var(--organic-color);
+    }
+
+    .waste-type.organic:hover {
+      border-color: var(--organic-color);
+      background: linear-gradient(135deg, #c8e6c9 0%, #dcedc8 100%);
+    }
+
+    .waste-type.recycle {
+      background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%);
+      border-color: var(--recycle-color);
+    }
+
+    .waste-type.recycle:hover {
+      border-color: var(--recycle-color);
+      background: linear-gradient(135deg, #fff3c4 0%, #ffecb3 100%);
+    }
+
+    .waste-type-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .waste-type-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .waste-type.organic .waste-type-icon {
+      background: var(--organic-color);
+      color: white;
+    }
+
+    .waste-type.recycle .waste-type-icon {
+      background: var(--recycle-color);
+      color: white;
+    }
+
+    .waste-type h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 0;
+      flex: 1;
+    }
+
+    .waste-type.organic h3 {
+      color: var(--organic-color);
+    }
+
+    .waste-type.recycle h3 {
+      color: var(--recycle-color);
+    }
+
+    .waste-type-description {
+      font-size: 0.95rem;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .waste-items {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .waste-items li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 0.9rem;
+      color: #666;
+      position: relative;
+    }
+
+    .waste-items li::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .waste-type.organic .waste-items li::before {
+      background: var(--organic-color);
+    }
+
+    .waste-type.recycle .waste-items li::before {
+      background: var(--recycle-color);
+    }
+
+    .tips-section {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 16px;
+      padding: calc(var(--spacing) * 1.2);
+      border: 2px solid #dee2e6;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tips-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #6f42c1, #e83e8c, #fd7e14);
+    }
+
+    .tips-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      color: #6f42c1;
+    }
+
+    .tips-icon {
+      width: 36px;
+      height: 36px;
+      background: #6f42c1;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .tips-section h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #6f42c1;
+    }
+
+    .tips-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .tips-grid li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(111, 66, 193, 0.05);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #495057;
+      border-left: 3px solid #6f42c1;
+    }
+
+    .tips-grid li::before {
+      content: '💡';
+      font-size: 1rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }.tips-section li::before {
+      content: '💡';
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* Animation keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInFromTop {
+      from { transform: translateY(-30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Responsive design adjustments */
+    @media (max-width: 768px) {
+      .interaction-content {
+        grid-template-columns: 1fr;
+        gap: var(--spacing);
+      }
+
+      .waste-types {
+        grid-template-columns: 1fr;
+        gap: var(--spacing);
+      }
+
+      .app-header h1 {
+        font-size: 2.2rem;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: none;
+      }
+
+      .main-interaction-card {
+        padding: var(--spacing);
+      }
+
+      .card {
+        flex: 1 1 100%;
+      }
+
+      video, canvas {
+        width: 100%;
+        height: auto;
+      }
+    }
+
+    @media (max-width: 480px) {
+      :root {
+        --spacing: 16px;
+      }
+
+      .app-header h1 {
+        font-size: 1.8rem;
+      }
+
+      .app-header p {
+        font-size: 1.1rem;
+      }
+
+      .section-title {
+        font-size: 1.1rem;
+      }
+
+      .waste-type h3 {
+        font-size: 1.2rem;
+      }
+
+      .card {
+        padding: 15px;
+      }
+    }
+
+    /* Navigation buttons */
+    .nav-buttons {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      z-index: 1000;
+    }
+    
+    .nav-button {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      border: none;
+    }
+    
+    .nav-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+    }
+    
+    .nav-tooltip {
+      position: absolute;
+      left: 60px;
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    
+    .nav-button:hover .nav-tooltip {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Buttons -->
+  <div class="nav-buttons">
+    <a href="index.html" class="nav-button">
+      <i class="fas fa-home"></i>
+      <span class="nav-tooltip">Trang chủ</span>
+    </a>
+    <a href="Game.html" class="nav-button">
+      <i class="fas fa-gamepad"></i>
+      <span class="nav-tooltip">Trò chơi phân loại rác</span>
+    </a>
+  </div>
+
+  <div class="container">
+    <!-- App Header -->    <header class="app-header">      <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px;">
+        <h1><i class="fas fa-recycle"></i> Phân loại rác thông minh</h1>
+      </div>
+      <p>Sử dụng trí tuệ nhân tạo để nhận diện và phân loại rác thải một cách chính xác</p>
+    </header>
+      <!-- Main Content Cards -->
+    <div class="card-wrapper">
+      <!-- Camera Card -->
+      <section class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-camera"></i> Camera</h2>
+        </div>
+        <div class="card-body">
+          <div class="video-container">
+            <video id="webcam" autoplay playsinline></video>
+          </div>
+          <button class="btn btn-primary" onclick="predictWaste()">
+            <i class="fas fa-magnifying-glass"></i> Phân loại rác
+          </button>
+        </div>
+      </section>
+      
+      <!-- Results Card -->
+      <section class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-chart-simple"></i> Kết quả phân tích</h2>
+        </div>
+        <div class="card-body">
+          <div class="result-container">
+            <div id="result">
+              <i class="fas fa-circle-info"></i> Chưa có kết quả, vui lòng nhấn nút phân loại
+            </div>
+          </div>
+          <div id="waste-info" class="result-container" style="margin-top: 20px; display: none;">
+            <h3 style="color: var(--primary-color); margin-bottom: 10px;">Hướng dẫn xử lý</h3>
+            <div id="waste-guidelines"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+      <!-- Rules Section - Modern Design -->
+    <section class="rules-section">
+      <div class="rules-card">
+        <div class="rules-header">
+          <h2>
+            <i class="fas fa-recycle"></i>
+            Quy tắc phân loại rác thông minh
+          </h2>
+          <p>Hướng dẫn chi tiết để phân loại rác đúng cách</p>
+        </div>
+        
+        <div class="rules-content">
+          <!-- Waste Types Grid -->
+          <div class="waste-types">
+            <!-- Organic Waste -->
+            <div class="waste-type organic">
+              <div class="waste-type-header">
+                <div class="waste-type-icon">
+                  <i class="fas fa-leaf"></i>
+                </div>
+                <h3>Thùng XANH LÁ</h3>
+              </div>
+              <p class="waste-type-description">
+                <strong>Rác hữu cơ</strong> - có khả năng phân hủy sinh học tự nhiên
+              </p>
+              <ul class="waste-items">
+                <li>Thức ăn thừa</li>
+                <li>Vỏ trái cây</li>
+                <li>Rau củ quả</li>
+                <li>Lá cây, cỏ</li>
+                <li>Bã cà phê</li>
+                <li>Vỏ trứng</li>
+              </ul>
+            </div>
+
+            <!-- Recyclable Waste -->
+            <div class="waste-type recycle">
+              <div class="waste-type-header">
+                <div class="waste-type-icon">
+                  <i class="fas fa-recycle"></i>
+                </div>
+                <h3>Thùng VÀNG</h3>
+              </div>
+              <p class="waste-type-description">
+                <strong>Rác tái chế</strong> - có thể được tái chế thành sản phẩm mới
+              </p>
+              <ul class="waste-items">
+                <li>Chai nhựa</li>
+                <li>Lon kim loại</li>
+                <li>Giấy, bìa carton</li>
+                <li>Thủy tinh</li>
+                <li>Vải, quần áo cũ</li>
+                <li>Hộp nhựa</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Tips Section -->
+          <div class="tips-section">
+            <div class="tips-header">
+              <div class="tips-icon">
+                <i class="fas fa-lightbulb"></i>
+              </div>
+              <h3>Mẹo phân loại hiệu quả</h3>
+            </div>
+            <ul class="tips-grid">
+              <li>Rửa sạch rác trước khi phân loại</li>
+              <li>Tách riêng các loại vật liệu khác nhau</li>
+              <li>Bỏ nắp chai nhựa riêng với thân chai</li>
+              <li>Tái sử dụng túi nhựa nhiều lần</li>
+              <li>Không vứt rác nguy hại cùng rác thường</li>
+              <li>Gấp gọn hộp carton để tiết kiệm không gian</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let model, webcam, labelContainer, maxPredictions;
+
+    const URL = "tm-my-image-model/"; // Đặt thư mục chứa model.json, metadata.json, weights.bin ở đây
+
+    async function init() {
+      try {
+        // Hiển thị trạng thái khởi tạo
+        document.getElementById("result").innerHTML = `
+          <i class="fas fa-spinner fa-spin"></i> Đang khởi tạo hệ thống...
+        `;
+        
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // Tải model AI
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Khởi tạo webcam với kích thước linh hoạt hơn
+        webcam = new tmImage.Webcam(480, 360, true); // Kích thước lớn hơn cho chất lượng tốt hơn
+        await webcam.setup();
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // Thay thế phần tử video bằng canvas và thêm class để styling
+        const webcamCanvas = webcam.canvas;
+        webcamCanvas.classList.add("webcam-canvas");
+        document.getElementById("webcam").replaceWith(webcamCanvas);
+        
+        // Cập nhật trạng thái sau khi khởi tạo thành công
+        document.getElementById("result").innerHTML = `
+          <i class="fas fa-circle-info"></i> Hệ thống đã sẵn sàng, hãy nhấn nút phân loại
+        `;
+      } catch (error) {
+        console.error("Error initializing the model or webcam:", error);
+        document.getElementById("result").innerHTML = `
+          <i class="fas fa-circle-exclamation"></i> Lỗi: Không thể khởi tạo mô hình hoặc webcam.
+          <div style="font-size: 0.9rem; margin-top: 8px; color: #d32f2f;">${error.message}</div>
+        `;
+      }
+    }
+
+    async function loop() {
+      webcam.update();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predictWaste() {
+      try {
+        // Hiển thị loading trong khi xử lý
+        document.getElementById("result").innerHTML = `
+          <i class="fas fa-spinner fa-spin"></i> Đang phân tích...
+        `;
+
+        const prediction = await model.predict(webcam.canvas);
+
+        // Log all predictions for debugging
+        console.log("Predictions:", prediction);
+
+        let highest = prediction[0];
+        for (let i = 1; i < prediction.length; i++) {
+          if (prediction[i].probability > highest.probability) {
+            highest = prediction[i];
+          }
+        }
+
+        // Map labels to more user-friendly names if needed
+        const labelMapping = {
+          "Organic Waste": "Rác hữu cơ",
+          "Recycle Waste": "Rác tái chế",
+          "Re": "Rác tái chế" // Thêm ánh xạ cho trường hợp "Re"
+        };        // Thông tin về cách xử lý mỗi loại rác
+        const wasteGuidelines = {
+          "Rác hữu cơ": `
+            <p><strong>Cách xử lý rác hữu cơ:</strong></p>
+            <ul style="text-align: left; padding-left: 20px;">
+              <li>Phân hủy tự nhiên thành phân compost</li>
+              <li><span style="color: #2e7d32; font-weight: bold;">Đặt vào thùng rác màu XANH LÁ</span></li>
+              <li>Có thể tái sử dụng làm phân bón cho cây trồng</li>
+              <li>Thời gian phân hủy ngắn, thân thiện với môi trường</li>
+            </ul>
+            <p style="margin-top: 10px; background-color: #e8f5e9; padding: 8px; border-radius: 5px; border-left: 4px solid #2e7d32;">
+              <i class="fas fa-info-circle"></i> Rác hữu cơ bao gồm: thức ăn thừa, vỏ trái cây, rau củ quả, lá cây...
+            </p>
+          `,
+          "Rác tái chế": `
+            <p><strong>Cách xử lý rác tái chế:</strong></p>
+            <ul style="text-align: left; padding-left: 20px;">
+              <li>Phân loại theo vật liệu: nhựa, kim loại, giấy, v.v.</li>
+              <li><span style="color: #F9A825; font-weight: bold;">Đặt vào thùng rác màu VÀNG</span></li>
+              <li>Làm sạch trước khi tái chế</li>
+              <li>Có thể được tái chế thành sản phẩm mới</li>
+            </ul>
+            <p style="margin-top: 10px; background-color: #FFF8E1; padding: 8px; border-radius: 5px; border-left: 4px solid #F9A825;">
+              <i class="fas fa-info-circle"></i> Rác tái chế bao gồm: chai nhựa, lon kim loại, hộp giấy, thủy tinh...
+            </p>
+          `
+        };        const resultLabel = labelMapping[highest.className.trim()] || highest.className.trim();
+        const confidence = Math.round(highest.probability * 100);
+        
+        // Hiển thị kết quả với icon phù hợp và độ chính xác
+        let resultIcon, trashColor, colorStyle, colorName;
+        
+        if (resultLabel === "Rác hữu cơ") {
+          resultIcon = "fa-leaf";
+          trashColor = "#2e7d32"; // Màu xanh lá
+          colorStyle = "background-color: #e8f5e9; border-color: #2e7d32;";
+          colorName = "XANH LÁ";
+        } else {
+          resultIcon = "fa-recycle";
+          trashColor = "#F9A825"; // Màu vàng
+          colorStyle = "background-color: #FFF8E1; border-color: #F9A825;";
+          colorName = "VÀNG";
+        }
+        
+        document.getElementById("result").innerHTML = `
+          <i class="fas ${resultIcon}" style="color: ${trashColor};"></i> 
+          Kết quả: <strong>${resultLabel}</strong>
+          <div style="font-size: 0.9rem; margin-top: 8px;">Độ chính xác: ${confidence}%</div>
+          <div style="margin-top: 12px; padding: 8px; border-radius: 5px; border: 2px solid ${trashColor}; ${colorStyle}">
+            <i class="fas fa-trash"></i> Vui lòng bỏ vào thùng rác màu <strong style="color: ${trashColor};">${colorName}</strong>
+          </div>
+        `;
+
+        // Hiển thị thông tin về cách xử lý loại rác
+        const wasteInfoElement = document.getElementById("waste-info");
+        const wasteGuidelinesElement = document.getElementById("waste-guidelines");
+        
+        if (wasteGuidelines[resultLabel]) {
+          wasteGuidelinesElement.innerHTML = wasteGuidelines[resultLabel];
+          wasteInfoElement.style.display = "block";
+        } else {
+          wasteInfoElement.style.display = "none";
+        }
+        
+        console.log(`Full result: ${resultLabel} (${confidence}%)`);
+      } catch (error) {
+        console.error("Error during prediction:", error);
+        document.getElementById("result").innerHTML = `
+          <i class="fas fa-circle-exclamation"></i> Lỗi: Không thể thực hiện phân loại.
+        `;
+        document.getElementById("waste-info").style.display = "none";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
